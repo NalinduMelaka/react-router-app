@@ -1,8 +1,9 @@
 import "./App.css";
 import { Route, Routes, Navigate, useLocation } from "react-router-dom";
 import Home from "./components/home";
-import { useState, lazy } from "react";
+import { useState, lazy, Suspense } from "react";
 import { SwitchTransition, CSSTransition } from "react-transition-group";
+import { appRoutes } from "./route";
 
 const Users = lazy(() => import("./components/users"));
 const UserProfile = lazy(() => import("./components/userProfile"));
@@ -26,30 +27,35 @@ function App() {
         unmountOnExit
         key={location.pathname}
       >
-        <Routes location={location}>
-          <Route exact path="/" element={<Home />} />
-          <Route path="/about" element={<AboutUs />} />
-          <Route path="/users" element={<Users />} />
-          <Route path="/search" element={<SearchUser />} />
-          <Route path="/users/user/:id" element={<UserProfile />} />
-          <Route
-            path="/login"
-            element={
-              <Login setIsLogged={setIsLogged} setUsername={setUsername} />
-            }
-          />
-          <Route
-            path="/authProfile"
-            element={
-              isLogged ? (
-                <AuthProfile username={username} />
-              ) : (
-                <Navigate replace to="/login" />
-              )
-            }
-          />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <Suspense fallback={<div>Loading...</div>}>
+          <Routes location={location}>
+            {appRoutes.map((route) => {
+              if (route.requireAuth && !isLogged) {
+                return (
+                  <Route
+                    key={route.path}
+                    path={route.path}
+                    element={<Navigate to={"/login"} />}
+                  />
+                );
+              } else {
+                return (
+                  <Route
+                    path={route.path}
+                    key={route.path}
+                    element={
+                      <route.component
+                        setIsLogged={setIsLogged}
+                        setUsername={setUsername}
+                        username={username}
+                      />
+                    }
+                  />
+                );
+              }
+            })}
+          </Routes>
+        </Suspense>
       </CSSTransition>
     </SwitchTransition>
   );
